@@ -59,24 +59,156 @@ cd CLI_Task_Timer
 # Build the project
 cargo build
 
-# Run the project
-cargo run
-
-# Build for release
+# Build for release (optimized)
 cargo build --release
 ```
 
-### Running Tests
+### Installing for Local Testing
+
+#### Option 1: Install in Current Directory
+
+Install the `tt` binary locally for testing without affecting your global installation:
 
 ```bash
-# Run all tests
-cargo test
+# Install from current directory
+cargo install --path . --bin tt
 
-# Run tests with output
-cargo test -- --nocapture
+# The binary will be installed to ~/.cargo/bin/tt
+# Make sure ~/.cargo/bin is in your PATH
+```
 
-# Run specific test
-cargo test test_name
+#### Option 2: Use Cargo Run for Testing
+
+Test the application directly without installation:
+
+```bash
+# Run with cargo (recommended for development)
+cargo run --bin tt -- --help
+cargo run --bin tt -- start "Test task"
+cargo run --bin tt -- pause
+cargo run --bin tt -- status
+cargo run --bin tt -- list
+
+# Examples of testing different scenarios
+cargo run --bin tt -- start "Feature development"
+cargo run --bin tt -- pause
+cargo run --bin tt -- resume
+cargo run --bin tt -- complete
+```
+
+#### Option 3: Use Built Binary Directly
+
+```bash
+# After building, use the binary directly
+./target/debug/tt --help
+./target/release/tt start "Direct binary test"
+```
+
+### Testing
+
+#### Running All Tests
+
+```bash
+# Run all unit tests
+cargo test --bin tt
+
+# Run tests with output (useful for debugging)
+cargo test --bin tt -- --nocapture
+
+# Run only unit tests (excludes integration tests)
+cargo test --bins
+
+# Run integration tests (if any)
+cargo test --test integration_tests
+```
+
+#### Running Specific Tests
+
+```bash
+# Run tests for a specific module
+cargo test task::tests
+cargo test cli::tests
+cargo test display::tests
+cargo test workflows
+
+# Run a specific test function
+cargo test test_task_pause
+cargo test test_complete_workflow_start_and_pause
+
+# Run tests matching a pattern
+cargo test workflow
+```
+
+#### Test Categories
+
+The project includes several types of tests:
+
+1. **Unit Tests** (in each module):
+
+   - Task creation and state management
+   - CLI argument parsing
+   - Display formatting functions
+   - Error handling
+
+2. **Integration Tests** (in `tests/` directory):
+
+   - End-to-end CLI command testing
+   - Full application workflow testing
+
+3. **Workflow Tests** (in `src/workflows.rs`):
+   - Complete task lifecycle testing
+   - Multi-task scenario validation
+   - Real-time duration measurement
+
+#### Performance Testing
+
+```bash
+# Build optimized release version
+cargo build --release
+
+# Time the startup performance
+time ./target/release/tt --version
+
+# Test with larger workloads
+./target/release/tt start "Performance test"
+# ... simulate work ...
+./target/release/tt pause
+```
+
+### Development Workflow
+
+#### Testing During Development
+
+```bash
+# 1. Make changes to source code
+# 2. Run relevant tests
+cargo test --bin tt
+
+# 3. Test CLI functionality manually
+cargo run --bin tt -- start "Testing changes"
+
+# 4. Build and test release version
+cargo build --release
+./target/release/tt --help
+
+# 5. Install locally for broader testing
+cargo install --path . --bin tt --force
+tt start "Integration testing"
+```
+
+#### Continuous Testing
+
+For continuous testing during development, you can use `cargo watch`:
+
+```bash
+# Install cargo-watch if not already installed
+cargo install cargo-watch
+
+# Run tests automatically on file changes
+cargo watch -x "test --bin tt"
+
+# Run tests and build on changes
+cargo watch -x "test --bin tt" -x "build --release"
 ```
 
 ## How to Contribute
@@ -166,7 +298,7 @@ docs(readme): update installation instructions
 test(timer): add unit tests for timer pause/resume
 ```
 
-## Testing
+## Test Guidelines
 
 ### Writing Tests
 
