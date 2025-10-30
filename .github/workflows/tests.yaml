@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+concurrency:
+    group: tests-${{ github.ref }}
+    cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -28,7 +32,7 @@ jobs:
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
-      
+
       - name: Test with Rust ${{ matrix.rust-version }}
         run: cargo test --verbose --all
 
