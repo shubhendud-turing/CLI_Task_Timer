@@ -147,10 +147,10 @@ impl TaskManager {
     /// If there's already a running task, it will be paused first
     pub(crate) fn start_task(&mut self, label: String) -> Result<usize, TaskError> {
         // Pause any currently running task
-        if let Some(index) = self.active_task_index {
-            if self.tasks[index].is_running() {
-                self.tasks[index].pause()?;
-            }
+        if let Some(index) = self.active_task_index
+            && self.tasks[index].is_running()
+        {
+            self.tasks[index].pause()?;
         }
 
         // Create and add the new task

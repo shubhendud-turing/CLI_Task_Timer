@@ -5,12 +5,12 @@ mod task;
 #[cfg(test)]
 mod workflows;
 
+use anyhow::Result;
 use clap::Parser;
 use cli::{Cli, Commands};
 use display::{display_current_status, display_task_summary};
 use std::process;
 use task::{TaskError, TaskManager};
-use anyhow::Result;
 
 fn main() {
     let cli = Cli::parse();
@@ -111,7 +111,10 @@ mod tests {
         let result = handle_command(&mut manager, command);
         assert!(result.is_err());
         // Check that anyhow error contains the TaskError::NoActiveTask message
-        assert!(result.unwrap_err().to_string().contains("No active task to operate on"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No active task to operate on"));
     }
 
     #[test]
