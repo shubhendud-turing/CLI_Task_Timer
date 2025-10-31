@@ -147,3 +147,133 @@ fn test_persistence_across_system_restart_simulation() {
         .stdout(predicate::str::contains("Important Work"))
         .stdout(predicate::str::contains("Running"));
 }
+
+#[test]
+fn test_complete_task_lifecycle() {
+    let test_name = "complete_lifecycle";
+
+    // Start a task
+    let mut cmd = fresh_test_command(test_name);
+    cmd.arg("start").arg("Feature development");
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Started task: 'Feature development'",
+    ));
+
+    // Work for a bit
+    std::thread::sleep(std::time::Duration::from_millis(50));
+
+    // Pause the task
+    let mut cmd = test_command(test_name);
+    cmd.arg("pause");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Paused task"))
+        .stdout(predicate::str::contains("Feature development"));
+
+    // Resume the task
+    let mut cmd = test_command(test_name);
+    cmd.arg("resume");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Resumed task"));
+
+    // Complete the task
+    let mut cmd = test_command(test_name);
+    cmd.arg("complete");
+    cmd.assert().success().stdout(predicate::str::contains(
+        "Completed task: 'Feature development'",
+    ));
+
+    // Verify no active task
+    let mut cmd = test_command(test_name);
+    cmd.arg("status");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("No active task"));
+
+    // Verify task shows as completed in list
+    let mut cmd = test_command(test_name);
+    cmd.arg("list");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Feature development"))
+        .stdout(predicate::str::contains("Completed"))
+        .stdout(predicate::str::contains("1 task"));
+}
+
+#[test]
+fn test_multiple_tasks_with_completions() {
+    let test_name = "multiple_completions";
+
+    // Start and complete first task
+    let mut cmd = fresh_test_command(test_name);
+    cmd.arg("start").arg("Task 1");
+    cmd.assert().success();
+
+    let mut cmd = test_command(test_name);
+    cmd.arg("complete");
+    cmd.assert().success();
+
+    // Start and complete second task
+    let mut cmd = test_command(test_name);
+    cmd.arg("start").arg("Task 2");
+    cmd.assert().success();
+
+    let mut cmd = test_command(test_name);
+    cmd.arg("complete");
+    cmd.assert().success();
+
+    // Start third task but don't complete it
+    let mut cmd = test_command(test_name);
+    cmd.arg("start").arg("Task 3");
+    cmd.assert().success();
+
+    // List all tasks
+    let mut cmd = test_command(test_name);
+    cmd.arg("list");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Task 1"))
+        .stdout(predicate::str::contains("Task 2"))
+        .stdout(predicate::str::contains("Task 3"))
+        .stdout(predicate::str::contains("3 tasks"))
+        .stdout(predicate::str::contains("Running: 1"))
+        .stdout(predicate::str::contains("Completed: 2"));
+
+    // Verify current task
+    let mut cmd = test_command(test_name);
+    cmd.arg("status");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Task 3"))
+        .stdout(predicate::str::contains("Running"));
+}
+
+#[test]
+fn test_completed_task_persistence() {
+    let test_name = "completed_persistence";
+
+    // Start and complete a task
+    let mut cmd = fresh_test_command(test_name);
+    cmd.arg("start").arg("Completed Work");
+    cmd.assert().success();
+
+    let mut cmd = test_command(test_name);
+    cmd.arg("complete");
+    cmd.assert().success();
+
+    // Simulate restart - check if completed task persists
+    let mut cmd = test_command(test_name);
+    cmd.arg("list");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("Completed Work"))
+        .stdout(predicate::str::contains("Completed"));
+
+    // Verify no active task
+    let mut cmd = test_command(test_name);
+    cmd.arg("status");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("No active task"));
+}
