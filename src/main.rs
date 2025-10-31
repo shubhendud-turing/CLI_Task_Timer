@@ -14,10 +14,23 @@ use task::{TaskError, TaskManager};
 
 fn main() {
     let cli = Cli::parse();
-    let mut task_manager = TaskManager::new();
+
+    // Load existing state or create new TaskManager
+    let mut task_manager = match TaskManager::load_or_create() {
+        Ok(manager) => manager,
+        Err(e) => {
+            eprintln!("Warning: Could not load tasks ({}), starting fresh", e);
+            TaskManager::new()
+        },
+    };
 
     match handle_command(&mut task_manager, cli.command) {
         Ok(message) => {
+            // Save state after successful command
+            if let Err(e) = task_manager.save() {
+                eprintln!("Warning: Could not save tasks: {}", e);
+            }
+
             if !message.is_empty() {
                 println!("{}", message);
             }
