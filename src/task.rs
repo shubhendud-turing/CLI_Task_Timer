@@ -1,6 +1,11 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::Write;
+use std::path::PathBuf;
 use std::time::Duration;
+
+const MAX_TASKS: usize = 10;
 
 /// Represents the current status of a task
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,7 +133,7 @@ impl Task {
 }
 
 /// Manages multiple tasks and enforces business rules
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub(crate) struct TaskManager {
     /// List of all tasks
     tasks: Vec<Task>,
@@ -205,6 +210,113 @@ impl TaskManager {
             .map(|task| task.is_running())
             .unwrap_or(false)
     }
+
+    /// Load existing TaskManager from file or create new one
+    pub(crate) fn load_or_create() -> Result<Self, TaskError> {
+        match Self::load_from_file() {
+            Ok(mut manager) => {
+                manager.cleanup_old_tasks();
+                Ok(manager)
+            },
+            Err(_) => Ok(Self::new()),
+        }
+    }
+
+    /// Load TaskManager from the JSON file
+    fn load_from_file() -> Result<Self, TaskError> {
+        let path = Self::get_config_path()?;
+        let content = fs::read_to_string(path)?;
+        let manager: TaskManager = serde_json::from_str(&content)?;
+        Ok(manager)
+    }
+
+    /// Save current TaskManager state to JSON file
+    pub(crate) fn save(&self) -> Result<(), TaskError> {
+        let path = Self::get_config_path()?;
+
+        // Ensure the parent directory exists
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        // Serialize to JSON
+        let json = serde_json::to_string_pretty(self)?;
+
+        // Write to temporary file first for atomicity
+        let temp_path = path.with_extension("tmp");
+        let mut file = fs::File::create(&temp_path)?;
+        file.write_all(json.as_bytes())?;
+        file.sync_all()?;
+
+        // Atomic rename
+        fs::rename(temp_path, path)?;
+        Ok(())
+    }
+
+    /// Get the cross-platform config file path
+    fn get_config_path() -> Result<PathBuf, TaskError> {
+        // Check for test override first
+        if let Ok(test_dir) = std::env::var("TT_CONFIG_DIR") {
+            return Ok(PathBuf::from(test_dir).join("tasks.json"));
+        }
+
+        let config_dir = dirs::config_dir().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                "Could not find config directory",
+            )
+        })?;
+
+        let tt_dir = config_dir.join("tt");
+        Ok(tt_dir.join("tasks.json"))
+    }
+
+    /// Remove oldest completed tasks if we have more than 10 total tasks
+    fn cleanup_old_tasks(&mut self) {
+
+        if self.tasks.len() <= MAX_TASKS {
+            return;
+        }
+
+        // Separate active and completed tasks
+        let active_task_id = self.active_task_index;
+        let mut active_tasks = Vec::new();
+        let mut completed_tasks = Vec::new();
+
+        for (index, task) in self.tasks.iter().enumerate() {
+            if Some(index) == active_task_id || !task.is_completed() {
+                active_tasks.push((index, task.clone()));
+            } else {
+                completed_tasks.push((index, task.clone()));
+            }
+        }
+
+        // Sort completed tasks by creation time (oldest first)
+        completed_tasks.sort_by(|a, b| a.1.created_at.cmp(&b.1.created_at));
+
+        // Keep active tasks + newest completed tasks up to MAX_TASKS
+        let mut new_tasks = Vec::new();
+        let mut new_active_index = None;
+
+        // Add active tasks first
+        for (old_index, task) in active_tasks {
+            if Some(old_index) == active_task_id {
+                new_active_index = Some(new_tasks.len());
+            }
+            new_tasks.push(task);
+        }
+
+        // Add newest completed tasks
+        let remaining_slots = MAX_TASKS.saturating_sub(new_tasks.len());
+        let keep_completed = completed_tasks.len().saturating_sub(remaining_slots);
+
+        for (_, task) in completed_tasks.into_iter().skip(keep_completed) {
+            new_tasks.push(task);
+        }
+
+        self.tasks = new_tasks;
+        self.active_task_index = new_active_index;
+    }
 }
 
 #[allow(dead_code)]
@@ -242,11 +354,11 @@ pub(crate) enum TaskError {
 
     /// I/O error occurred during task operations
     #[error("I/O error")]
-    IoError(#[source] std::io::Error),
+    IoError(#[from] std::io::Error),
 
     /// Serialization error
     #[error("Serialization error")]
-    SerializationError(#[source] serde_json::Error),
+    SerializationError(#[from] serde_json::Error),
 
     /// Time-related error
     #[error("Time calculation error: {details}")]
@@ -447,4 +559,100 @@ mod tests {
             _ => panic!("Expected TaskCompleted error"),
         }
     }
+
+    #[test]
+    fn test_serialize_deserialize_task_manager() {
+        let mut manager = TaskManager::new();
+        let _task_id = manager.start_task("Test Task".to_string()).unwrap();
+        manager.pause_current_task().unwrap();
+
+        // Serialize to JSON
+        let json = serde_json::to_string(&manager).unwrap();
+        assert!(json.contains("Test Task"));
+        assert!(json.contains("Paused"));
+
+        // Deserialize from JSON
+        let deserialized: TaskManager = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.tasks.len(), 1);
+        assert_eq!(deserialized.active_task_index, Some(0));
+        assert_eq!(deserialized.tasks[0].label, "Test Task");
+        assert!(deserialized.tasks[0].is_paused());
+    }
+
+    #[test]
+    fn test_cleanup_old_tasks() {
+        let mut manager = TaskManager::new();
+
+        // Create 15 tasks (more than the 10 limit)
+        for i in 0..15 {
+            let _task_id = manager.start_task(format!("Task {}", i)).unwrap();
+            // Complete old tasks by directly modifying tasks (simulating completed state)
+            if i < 10 {
+                // Access task directly for testing purposes
+                if let Some(index) = manager.active_task_index {
+                    manager.tasks[index].status = TaskStatus::Completed;
+                    manager.active_task_index = None;
+                }
+            }
+        }
+
+        assert_eq!(manager.tasks.len(), 15);
+
+        // Run cleanup
+        manager.cleanup_old_tasks();
+
+        // Should have at most 10 tasks
+        assert!(manager.tasks.len() <= 10);
+
+        // Should preserve the most recent active/incomplete tasks
+        let has_recent_tasks = manager
+            .tasks
+            .iter()
+            .any(|task| task.label.contains("Task 14") || task.label.contains("Task 13"));
+        assert!(has_recent_tasks);
+    }
+
+    #[test]
+    fn test_cleanup_preserves_active_task() {
+        let mut manager = TaskManager::new();
+
+        // Create many completed tasks
+        for i in 0..12 {
+            let _task_id = manager.start_task(format!("Completed Task {}", i)).unwrap();
+            // Simulate completion by setting status directly
+            if let Some(index) = manager.active_task_index {
+                manager.tasks[index].status = TaskStatus::Completed;
+                manager.active_task_index = None;
+            }
+        }
+
+        // Create one active task
+        let _active_id = manager
+            .start_task("Important Active Task".to_string())
+            .unwrap();
+
+        assert_eq!(manager.tasks.len(), 13);
+
+        // Run cleanup
+        manager.cleanup_old_tasks();
+
+        // Should still have the active task
+        assert!(manager.active_task_index.is_some());
+        let current_task = manager.current_task().unwrap();
+        assert_eq!(current_task.label, "Important Active Task");
+        assert!(manager.tasks.len() <= 10);
+    }
+
+    #[test]
+    fn test_get_config_path() {
+        let path_result = TaskManager::get_config_path();
+        assert!(path_result.is_ok());
+
+        let path = path_result.unwrap();
+        assert!(path.to_string_lossy().contains("tt"));
+        assert!(path.to_string_lossy().ends_with("tasks.json"));
+    }
+
+    // Note: File I/O tests would be more complex and require temporary directories
+    // They're better suited for integration tests to avoid filesystem side effects
 }
