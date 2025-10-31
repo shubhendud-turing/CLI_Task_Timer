@@ -2,7 +2,7 @@ use predicates::prelude::*;
 use std::{env, fs};
 
 pub mod common;
-use common::{test_command, fresh_test_command};
+use common::{fresh_test_command, test_command};
 
 #[test]
 fn test_persistence_start_pause_resume_workflow() {
@@ -89,7 +89,7 @@ fn test_task_cleanup_after_limit() {
     // Create more than 10 tasks to trigger cleanup
     for i in 1..=12 {
         let mut cmd = test_command(test_name);
-        cmd.arg("start").arg(&format!("Task {}", i));
+        cmd.arg("start").arg(format!("Task {}", i));
         cmd.assert().success();
 
         // Complete some tasks by starting new ones (auto-pauses)

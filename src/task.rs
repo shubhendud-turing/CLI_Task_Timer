@@ -273,7 +273,6 @@ impl TaskManager {
 
     /// Remove oldest completed tasks if we have more than 10 total tasks
     fn cleanup_old_tasks(&mut self) {
-
         if self.tasks.len() <= MAX_TASKS {
             return;
         }
