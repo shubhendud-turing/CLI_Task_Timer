@@ -4,7 +4,8 @@ A fast, lightweight command-line tool for tracking time spent on tasks. Perfect 
 
 ## Features
 
-- ⏱️ **Start/Pause Tasks**: Create labeled tasks and pause/resume timing
+- ⏱️ **Start/Pause/Resume Tasks**: Create labeled tasks and pause/resume timing
+- ✅ **Complete Tasks**: Mark tasks as completed when finished
 - 🏃 **Real-time Tracking**: Accurate time measurement with nanosecond precision
 - 📊 **Task Status**: View current task status and accumulated time
 - 📝 **Task History**: List all tasks with durations and status
@@ -75,6 +76,29 @@ Resume the currently paused task:
 tt resume
 ```
 
+### Completing a Task
+
+Mark the currently active task as completed:
+
+```bash
+tt complete
+```
+
+This will:
+
+- Stop the timer if the task is running
+- Mark the task as completed
+- Clear the active task status
+- Preserve the task in history for tracking
+
+Example output:
+
+```text
+Completed task: 'Working on API implementation'
+```
+
+After completing a task, `tt status` will show `No active task`.
+
 ### Checking Status
 
 View the current task status:
@@ -110,14 +134,6 @@ Total Time: 1h 53m 27s
 Running: 1 | Paused: 1 | Completed: 1
 ```
 
-### Completing a Task
-
-Mark the current task as completed:
-
-```bash
-tt complete
-```
-
 ## Common Workflows
 
 ### Basic Session
@@ -149,11 +165,17 @@ tt start "Bug fixing"
 # Switch to urgent task (automatically pauses first)
 tt start "Urgent client request"
 
+# Complete the urgent task
+tt complete
+
 # View all tasks
 tt list
 
-# Resume first task later
+# Resume first task to finish it
 tt resume
+
+# Complete when done
+tt complete
 ```
 
 ## Error Handling
@@ -162,12 +184,16 @@ The tool provides clear error messages for invalid operations:
 
 - Trying to pause when no task is running
 - Trying to resume a task that's already running
+- Trying to complete when no task is active
 - Missing required arguments
 
 Example:
 
 ```bash
 $ tt pause
+Error: No active task to operate on
+
+$ tt complete
 Error: No active task to operate on
 ```
 
