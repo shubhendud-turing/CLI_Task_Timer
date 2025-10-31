@@ -1,5 +1,5 @@
-use std::{fs, env};
 use assert_cmd::cargo::cargo_bin_cmd;
+use std::{env, fs};
 
 /// Create a command with test-specific config directory that persists across calls within the same test
 pub fn test_command(test_name: &str) -> assert_cmd::Command {
@@ -39,9 +39,9 @@ pub fn cleanup_all_test_dirs() {
 }
 
 /// Helper to run a test with automatic cleanup afterward
-pub fn with_test_cleanup<F>(test_name: &str, test_fn: F) 
-where 
-    F: FnOnce(assert_cmd::Command)
+pub fn with_test_cleanup<F>(test_name: &str, test_fn: F)
+where
+    F: FnOnce(assert_cmd::Command),
 {
     let cmd = test_command(test_name);
     test_fn(cmd);
