@@ -189,6 +189,18 @@ impl TaskManager {
         }
     }
 
+    /// Completes the currently active task and clears the active task status
+    pub(crate) fn complete_current_task(&mut self) -> Result<(), TaskError> {
+        match self.active_task_index {
+            Some(index) => {
+                self.tasks[index].complete()?;
+                self.active_task_index = None;
+                Ok(())
+            },
+            None => Err(TaskError::NoActiveTask),
+        }
+    }
+
     /// Gets a reference to the currently active task
     pub(crate) fn current_task(&self) -> Option<&Task> {
         self.active_task_index.map(|index| &self.tasks[index])
@@ -650,6 +662,102 @@ mod tests {
         let path = path_result.unwrap();
         assert!(path.to_string_lossy().contains("tt"));
         assert!(path.to_string_lossy().ends_with("tasks.json"));
+    }
+
+    #[test]
+    fn test_complete_current_task_running() {
+        let mut manager = TaskManager::new();
+        manager.start_task("Test Task".to_string()).unwrap();
+        thread::sleep(StdDuration::from_millis(10));
+
+        let result = manager.complete_current_task();
+        assert!(result.is_ok());
+
+        // Should have no active task after completion
+        assert!(manager.current_task().is_none());
+        assert_eq!(manager.active_task_index, None);
+
+        // Task should be completed
+        assert_eq!(manager.tasks.len(), 1);
+        assert!(manager.tasks[0].is_completed());
+        assert!(manager.tasks[0].total_duration() > Duration::ZERO);
+    }
+
+    #[test]
+    fn test_complete_current_task_paused() {
+        let mut manager = TaskManager::new();
+        manager.start_task("Test Task".to_string()).unwrap();
+        thread::sleep(StdDuration::from_millis(10));
+        manager.pause_current_task().unwrap();
+
+        let result = manager.complete_current_task();
+        assert!(result.is_ok());
+
+        // Should have no active task after completion
+        assert!(manager.current_task().is_none());
+        assert_eq!(manager.active_task_index, None);
+
+        // Task should be completed
+        assert_eq!(manager.tasks.len(), 1);
+        assert!(manager.tasks[0].is_completed());
+    }
+
+    #[test]
+    fn test_complete_current_task_no_active() {
+        let mut manager = TaskManager::new();
+
+        let result = manager.complete_current_task();
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            TaskError::NoActiveTask => {},
+            _ => panic!("Expected NoActiveTask error"),
+        }
+    }
+
+    #[test]
+    fn test_complete_task_cannot_be_resumed() {
+        let mut manager = TaskManager::new();
+        manager.start_task("Test Task".to_string()).unwrap();
+        manager.complete_current_task().unwrap();
+
+        // Task is completed and no longer active
+        // Trying to resume should fail since there's no active task
+        let result = manager.resume_current_task();
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            TaskError::NoActiveTask => {},
+            _ => panic!("Expected NoActiveTask error"),
+        }
+    }
+
+    #[test]
+    fn test_multiple_tasks_with_completion() {
+        let mut manager = TaskManager::new();
+
+        // Start and complete first task
+        manager.start_task("Task 1".to_string()).unwrap();
+        thread::sleep(StdDuration::from_millis(10));
+        manager.complete_current_task().unwrap();
+
+        // Start and complete second task
+        manager.start_task("Task 2".to_string()).unwrap();
+        thread::sleep(StdDuration::from_millis(10));
+        manager.complete_current_task().unwrap();
+
+        // Start third task but don't complete it
+        manager.start_task("Task 3".to_string()).unwrap();
+
+        // Should have 3 tasks total
+        assert_eq!(manager.tasks.len(), 3);
+
+        // First two should be completed
+        assert!(manager.tasks[0].is_completed());
+        assert!(manager.tasks[1].is_completed());
+
+        // Third should be running
+        assert!(manager.tasks[2].is_running());
+        assert!(manager.current_task().is_some());
+        assert_eq!(manager.current_task().unwrap().label, "Task 3");
     }
 
     // Note: File I/O tests would be more complex and require temporary directories
