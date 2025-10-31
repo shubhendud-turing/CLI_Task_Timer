@@ -74,17 +74,13 @@ fn handle_command(task_manager: &mut TaskManager, command: Commands) -> Result<S
 
         Commands::List => Ok(display_task_summary(task_manager.all_tasks())),
 
-        Commands::Complete => {
-            match task_manager.current_task() {
-                Some(task) => {
-                    let label = task.label.clone();
-                    // Note: We need to add a complete_current_task method to TaskManager
-                    // For now, we'll pause it as a workaround
-                    task_manager.pause_current_task()?;
-                    Ok(format!("Completed task: '{}'", label))
-                },
-                None => Err(TaskError::NoActiveTask.into()),
-            }
+        Commands::Complete => match task_manager.current_task() {
+            Some(task) => {
+                let label = task.label.clone();
+                task_manager.complete_current_task()?;
+                Ok(format!("Completed task: '{}'", label))
+            },
+            None => Err(TaskError::NoActiveTask.into()),
         },
     }
 }
@@ -181,5 +177,57 @@ mod tests {
         assert!(list.contains("Task Summary (2 tasks)"));
         assert!(list.contains("Task 1"));
         assert!(list.contains("Task 2"));
+    }
+
+    #[test]
+    fn test_handle_complete_command() {
+        let mut manager = TaskManager::new();
+        manager.start_task("Test Task".to_string()).unwrap();
+
+        let command = Commands::Complete;
+        let result = handle_command(&mut manager, command);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("Completed task: 'Test Task'"));
+
+        // Should have no active task after completion
+        assert!(manager.current_task().is_none());
+
+        // Task should still exist but be completed
+        assert_eq!(manager.task_count(), 1);
+        assert!(manager.all_tasks()[0].is_completed());
+    }
+
+    #[test]
+    fn test_handle_complete_command_no_active_task() {
+        let mut manager = TaskManager::new();
+
+        let command = Commands::Complete;
+        let result = handle_command(&mut manager, command);
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No active task to operate on"));
+    }
+
+    #[test]
+    fn test_handle_complete_command_paused_task() {
+        let mut manager = TaskManager::new();
+        manager.start_task("Test Task".to_string()).unwrap();
+        manager.pause_current_task().unwrap();
+
+        let command = Commands::Complete;
+        let result = handle_command(&mut manager, command);
+
+        assert!(result.is_ok());
+        assert!(result.unwrap().contains("Completed task: 'Test Task'"));
+
+        // Should have no active task after completion
+        assert!(manager.current_task().is_none());
+
+        // Task should be completed
+        assert!(manager.all_tasks()[0].is_completed());
     }
 }
