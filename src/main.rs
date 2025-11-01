@@ -79,6 +79,45 @@ fn handle_command(task_manager: &mut TaskManager, command: Commands) -> Result<S
             },
             None => Err(TaskError::NoActiveTask.into()),
         },
+
+        Commands::Delete { index, completed } => {
+            if completed {
+                // Delete all completed tasks
+                let count = task_manager.delete_completed_tasks()?;
+                if count == 0 {
+                    Ok("No completed tasks to delete".to_string())
+                } else {
+                    Ok(format!("{} completed task(s) deleted successfully", count))
+                }
+            } else if let Some(idx) = index {
+                // Delete specific task by index
+                if task_manager.task_count() == 0 {
+                    return Err(TaskError::InvalidState {
+                        message: "No tasks available to delete".to_string(),
+                    }
+                    .into());
+                }
+
+                let task_label = if idx > 0 && idx <= task_manager.task_count() {
+                    task_manager.all_tasks()[idx - 1].label.clone()
+                } else {
+                    String::new()
+                };
+
+                task_manager.delete_task(idx)?;
+
+                if !task_label.is_empty() {
+                    Ok(format!("Task \"{}\" deleted successfully", task_label))
+                } else {
+                    Ok("Task deleted successfully".to_string())
+                }
+            } else {
+                Err(TaskError::InvalidState {
+                    message: "Please specify a task index or use --completed flag".to_string(),
+                }
+                .into())
+            }
+        },
     }
 }
 
