@@ -13,19 +13,24 @@ pub(crate) struct Cli {
 #[derive(Subcommand)]
 pub(crate) enum Commands {
     /// Start a new task with a label
+    #[command(visible_alias = "s")]
     Start {
         /// Label for the task
         label: String,
     },
     /// Pause the currently running task
+    #[command(visible_alias = "p")]
     Pause,
     /// Resume the currently paused task
+    #[command(visible_alias = "r")]
     Resume,
     /// Show the current task status
     Status,
     /// List all tasks and their durations
+    #[command(visible_alias = "l")]
     List,
     /// Complete the current task
+    #[command(visible_alias = "c")]
     Complete,
 }
 
