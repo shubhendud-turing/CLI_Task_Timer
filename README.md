@@ -152,6 +152,54 @@ Total Time: 1h 53m 27s
 Running: 1 | Paused: 1 | Completed: 1
 ```
 
+### Deleting Tasks
+
+Delete a specific task by index:
+
+```bash
+# Using long name
+ tt delete 2
+# Using short alias
+ tt d 2
+```
+
+Delete all completed tasks:
+
+```bash
+# Using long name
+ tt delete --completed
+# Using short alias
+ tt d --completed
+```
+
+Example output:
+
+```text
+Task "Task 2" deleted successfully
+1 completed task(s) deleted successfully
+No completed tasks to delete
+```
+
+Error handling examples:
+
+```bash
+# Invalid index (out of bounds)
+tt delete 99
+Error: Invalid state: Task index 99 is out of bounds. Valid range: 1-2
+
+# Attempting to delete active task
+tt delete 1
+Error: Invalid state: Cannot delete task 'Running Task' - task is currently running. Please pause or complete it first.
+
+# Empty task list
+tt delete 1
+Error: No tasks available to delete
+
+# No completed tasks found
+tt delete --completed
+No completed tasks to delete
+```
+
 ## Common Workflows
 
 ### Basic Session
