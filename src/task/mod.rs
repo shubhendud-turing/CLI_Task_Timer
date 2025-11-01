@@ -223,6 +223,102 @@ impl TaskManager {
             .unwrap_or(false)
     }
 
+    /// Delete a task by index (1-based)
+    pub(crate) fn delete_task(&mut self, index: usize) -> Result<(), TaskError> {
+        // Validate index
+        if index == 0 {
+            return Err(TaskError::InvalidState {
+                message: "Task index must be greater than 0".to_string(),
+            });
+        }
+
+        if index > self.tasks.len() {
+            return Err(TaskError::InvalidState {
+                message: format!(
+                    "Task index {} is out of bounds. Valid range: 1-{}",
+                    index,
+                    self.tasks.len()
+                ),
+            });
+        }
+
+        if self.tasks.is_empty() {
+            return Err(TaskError::InvalidState {
+                message: "No tasks available to delete".to_string(),
+            });
+        }
+
+        let task_index = index - 1; // Convert to 0-based
+
+        // Check if task is active
+        if let Some(active_idx) = self.active_task_index {
+            if active_idx == task_index {
+                let task = &self.tasks[task_index];
+                if task.is_running() {
+                    return Err(TaskError::InvalidState {
+                        message: format!(
+                            "Cannot delete task '{}' - task is currently running. Please pause or complete it first.",
+                            task.label
+                        ),
+                    });
+                }
+                if task.is_paused() {
+                    return Err(TaskError::InvalidState {
+                        message: format!(
+                            "Cannot delete task '{}' - task is currently paused. Please resume and complete it, or complete it directly.",
+                            task.label
+                        ),
+                    });
+                }
+            }
+        }
+
+        // Remove the task
+        self.tasks.remove(task_index);
+
+        // Update active_task_index
+        if let Some(active_idx) = self.active_task_index {
+            if task_index < active_idx {
+                // Deleted task was before active task, decrement index
+                self.active_task_index = Some(active_idx - 1);
+            } else if task_index == active_idx {
+                // Deleted task was the active task
+                self.active_task_index = None;
+            }
+            // If task_index > active_idx, no change needed
+        }
+
+        Ok(())
+    }
+
+    /// Delete all completed tasks
+    pub(crate) fn delete_completed_tasks(&mut self) -> Result<usize, TaskError> {
+        if self.tasks.is_empty() {
+            return Ok(0);
+        }
+
+        let completed_count = self.tasks.iter().filter(|t| t.is_completed()).count();
+
+        if completed_count == 0 {
+            return Ok(0);
+        }
+
+        // Remove completed tasks
+        self.tasks.retain(|task| !task.is_completed());
+
+        // Update active_task_index
+        if let Some(active_idx) = self.active_task_index {
+            let new_idx = active_idx.saturating_sub(completed_count);
+            if new_idx >= self.tasks.len() {
+                self.active_task_index = None;
+            } else {
+                self.active_task_index = Some(new_idx);
+            }
+        }
+
+        Ok(completed_count)
+    }
+
     /// Load existing TaskManager from file or create new one
     pub(crate) fn load_or_create() -> Result<Self, TaskError> {
         match Self::load_from_file() {
