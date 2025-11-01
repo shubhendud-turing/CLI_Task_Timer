@@ -130,6 +130,20 @@ impl Task {
     pub(crate) fn is_completed(&self) -> bool {
         matches!(self.status, TaskStatus::Completed)
     }
+
+    /// Sets a new label for the task
+    pub(crate) fn set_label(&mut self, new_label: String) -> Result<(), TaskError> {
+        let trimmed = new_label.trim();
+
+        if trimmed.is_empty() {
+            return Err(TaskError::InvalidState {
+                message: "Task label cannot be empty or whitespace-only".to_string(),
+            });
+        }
+
+        self.label = trimmed.to_string();
+        Ok(())
+    }
 }
 
 /// Manages multiple tasks and enforces business rules
@@ -221,6 +235,44 @@ impl TaskManager {
         self.current_task()
             .map(|task| task.is_running())
             .unwrap_or(false)
+    }
+
+    /// Rename a task by index (1-based)
+    pub(crate) fn rename_task(
+        &mut self,
+        index: usize,
+        new_label: String,
+    ) -> Result<String, TaskError> {
+        // Validate index
+        if index == 0 {
+            return Err(TaskError::InvalidState {
+                message: "Task index must be greater than 0".to_string(),
+            });
+        }
+
+        if self.tasks.is_empty() {
+            return Err(TaskError::InvalidState {
+                message: "No tasks available to rename".to_string(),
+            });
+        }
+
+        if index > self.tasks.len() {
+            return Err(TaskError::InvalidState {
+                message: format!(
+                    "Task index {} is out of bounds. Valid range: 1-{}",
+                    index,
+                    self.tasks.len()
+                ),
+            });
+        }
+
+        let task_index = index - 1; // Convert to 0-based
+        let old_label = self.tasks[task_index].label.clone();
+
+        // Set the new label (this will validate it's not empty)
+        self.tasks[task_index].set_label(new_label)?;
+
+        Ok(old_label)
     }
 
     /// Delete a task by index (1-based)
