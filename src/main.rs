@@ -118,6 +118,14 @@ fn handle_command(task_manager: &mut TaskManager, command: Commands) -> Result<S
                 .into())
             }
         },
+
+        Commands::Rename { index, new_label } => {
+            let old_label = task_manager.rename_task(index, new_label.clone())?;
+            Ok(format!(
+                "Task renamed from \"{}\" to \"{}\"",
+                old_label, new_label
+            ))
+        },
     }
 }
 
