@@ -102,3 +102,48 @@ fn test_command_names() {
     assert_eq!(Commands::List.name(), "list");
     assert_eq!(Commands::Complete.name(), "complete");
 }
+
+#[test]
+fn test_cli_parsing_short_start_command() {
+    let args = vec!["task-timer", "s", "My Task"];
+    let cli = Cli::try_parse_from(args).unwrap();
+
+    match cli.command {
+        Commands::Start { label } => {
+            assert_eq!(label, "My Task");
+        },
+        _ => panic!("Expected Start command"),
+    }
+}
+
+#[test]
+fn test_cli_parsing_short_pause_command() {
+    let args = vec!["task-timer", "p"];
+    let cli = Cli::try_parse_from(args).unwrap();
+
+    matches!(cli.command, Commands::Pause);
+}
+
+#[test]
+fn test_cli_parsing_short_resume_command() {
+    let args = vec!["task-timer", "r"];
+    let cli = Cli::try_parse_from(args).unwrap();
+
+    matches!(cli.command, Commands::Resume);
+}
+
+#[test]
+fn test_cli_parsing_short_list_command() {
+    let args = vec!["task-timer", "l"];
+    let cli = Cli::try_parse_from(args).unwrap();
+
+    matches!(cli.command, Commands::List);
+}
+
+#[test]
+fn test_cli_parsing_short_complete_command() {
+    let args = vec!["task-timer", "c"];
+    let cli = Cli::try_parse_from(args).unwrap();
+
+    matches!(cli.command, Commands::Complete);
+}
