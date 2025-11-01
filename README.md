@@ -47,9 +47,11 @@ tt --version
 Start a new task with a descriptive label:
 
 ```bash
-tt start "Working on API implementation"
-tt start "Code review session"
-tt start "Writing documentation"
+# Using long name
+ tt start "Working on API implementation"
+
+# Using short name
+ tt s "Working on API implementation"
 ```
 
 **Note**: Starting a new task automatically pauses any currently running task.
@@ -59,7 +61,11 @@ tt start "Writing documentation"
 Pause the currently running task:
 
 ```bash
-tt pause
+# Using long name
+ tt pause
+
+# Using short name
+ tt p
 ```
 
 This will stop the timer and accumulate the elapsed time. You'll see output like:
@@ -73,7 +79,11 @@ Paused task. Current Task: Working on API implementation [⏸️  Paused] - 15m 
 Resume the currently paused task:
 
 ```bash
-tt resume
+# Using long name
+ tt resume
+
+# Using short name
+ tt r
 ```
 
 ### Completing a Task
@@ -81,7 +91,11 @@ tt resume
 Mark the currently active task as completed:
 
 ```bash
-tt complete
+# Using long name
+ tt complete
+
+# Using short name
+ tt c
 ```
 
 This will:
@@ -117,7 +131,11 @@ Example output:
 View all tasks with their durations and status:
 
 ```bash
-tt list
+# Using long name
+ tt list
+
+# Using short name
+ tt l
 ```
 
 Example output:
