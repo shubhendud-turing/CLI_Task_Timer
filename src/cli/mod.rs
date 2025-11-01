@@ -41,6 +41,14 @@ pub(crate) enum Commands {
         #[arg(long)]
         completed: bool,
     },
+    /// Rename a task by index
+    #[command(visible_alias = "e")]
+    Rename {
+        /// Index of the task to rename (1-based)
+        index: usize,
+        /// New label for the task
+        new_label: String,
+    },
 }
 
 #[allow(dead_code)]
@@ -54,6 +62,7 @@ impl Commands {
             Commands::List => "list",
             Commands::Complete => "complete",
             Commands::Delete { .. } => "delete",
+            Commands::Rename { .. } => "rename",
         }
     }
 }
