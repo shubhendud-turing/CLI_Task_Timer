@@ -251,25 +251,25 @@ impl TaskManager {
         let task_index = index - 1; // Convert to 0-based
 
         // Check if task is active
-        if let Some(active_idx) = self.active_task_index {
-            if active_idx == task_index {
-                let task = &self.tasks[task_index];
-                if task.is_running() {
-                    return Err(TaskError::InvalidState {
+        if let Some(active_idx) = self.active_task_index
+            && active_idx == task_index
+        {
+            let task = &self.tasks[task_index];
+            if task.is_running() {
+                return Err(TaskError::InvalidState {
                         message: format!(
                             "Cannot delete task '{}' - task is currently running. Please pause or complete it first.",
                             task.label
                         ),
                     });
-                }
-                if task.is_paused() {
-                    return Err(TaskError::InvalidState {
+            }
+            if task.is_paused() {
+                return Err(TaskError::InvalidState {
                         message: format!(
                             "Cannot delete task '{}' - task is currently paused. Please resume and complete it, or complete it directly.",
                             task.label
                         ),
                     });
-                }
             }
         }
 
