@@ -32,6 +32,15 @@ pub(crate) enum Commands {
     /// Complete the current task
     #[command(visible_alias = "c")]
     Complete,
+    /// Delete a task by index or all completed tasks
+    #[command(visible_alias = "d")]
+    Delete {
+        /// Index of the task to delete (1-based)
+        index: Option<usize>,
+        /// Delete all completed tasks
+        #[arg(long)]
+        completed: bool,
+    },
 }
 
 #[allow(dead_code)]
@@ -44,6 +53,7 @@ impl Commands {
             Commands::Status => "status",
             Commands::List => "list",
             Commands::Complete => "complete",
+            Commands::Delete { .. } => "delete",
         }
     }
 }
