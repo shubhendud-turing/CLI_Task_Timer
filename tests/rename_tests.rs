@@ -210,7 +210,6 @@ fn test_cli_rename_empty_task_list() {
         .stderr(predicate::str::contains("No tasks available"));
 }
 
-
 #[test]
 fn test_cli_rename_multiple_tasks() {
     let test_name = "rename_multiple_tasks";
