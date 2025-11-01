@@ -152,6 +152,41 @@ Total Time: 1h 53m 27s
 Running: 1 | Paused: 1 | Completed: 1
 ```
 
+### Renaming Tasks
+
+Rename a task to fix typos or update descriptions:
+
+```bash
+# Using long name
+ tt rename 2 "Updated task label"
+# Using short alias
+ tt e 2 "Fixed typo in label"
+```
+
+Example output:
+
+```text
+Task renamed from "Old Label" to "New Label"
+```
+
+**Note**: You can rename any task (running, paused, or completed) without affecting its timing data or status.
+
+Error handling examples:
+
+```bash
+# Invalid index (out of bounds)
+tt rename 99 "New Label"
+Error: Invalid state: Task index 99 is out of bounds. Valid range: 1-3
+
+# Empty or whitespace-only label
+tt rename 1 "   "
+Error: Invalid state: Task label cannot be empty or whitespace-only
+
+# Empty task list
+tt rename 1 "New Label"
+Error: No tasks available to rename
+```
+
 ### Deleting Tasks
 
 Delete a specific task by index:
